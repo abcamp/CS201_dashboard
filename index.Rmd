@@ -1,0 +1,46 @@
+---
+title: "CS201 Flexdashboard Practice"
+# author: "Amber Camp"
+# date: 11/18/24
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns # can also be rows
+    vertical_layout: fill # can also be scroll
+    source_code: embed
+    theme:
+      bootswatch: yeti
+    navbar:
+      - { title: "Amber Camp", href: "https://abcamp.github.io", align: right }
+      - { icon: "fa fa-github", href: "https://github.com/abcamp", align: right, target: blank }
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(tidyverse)
+library(plotly)
+```
+
+Column {data-width=650}
+-----------------------------------------------------------------------
+
+### Chart A
+
+```{r}
+
+```
+
+Column {data-width=350}
+-----------------------------------------------------------------------
+
+### Chart B
+
+```{r}
+
+```
+
+### Chart C
+
+```{r}
+
+```
+
