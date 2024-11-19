@@ -20,27 +20,34 @@ library(tidyverse)
 library(plotly)
 ```
 
-Column {data-width=650}
------------------------------------------------------------------------
-
-### Chart A
-
-```{r}
-
-```
-
 Column {data-width=350}
 -----------------------------------------------------------------------
 
-### Chart B
+### Star Wars character heights by name
 
 ```{r}
-
+ggplot(starwars, aes(x=name, y=height)) +
+  geom_bar(stat="identity") +
+  coord_flip()
 ```
 
-### Chart C
+### Count of Star Wars characters' homeworld by gender
 
 ```{r}
+p <- ggplot(starwars, aes(x=homeworld, fill=gender)) +
+  geom_bar()
 
+ggplotly(p)
+```
+
+Column {data-width=650}
+-----------------------------------------------------------------------
+### Star Wars data table
+
+```{r}
+starwars <- starwars %>% 
+  select(name, height, mass, gender, species, homeworld)
+
+knitr::kable(starwars)
 ```
 
