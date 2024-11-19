@@ -1,0 +1,57 @@
+---
+title: "CS201 Flexdashboard Practice"
+# author: "Amber Camp"
+# date: 11/18/24
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns # can replace with rows
+    vertical_layout: scroll # can replace with scroll
+    source_code: embed # required for class
+    theme:
+      bootswatch: yeti
+    navbar:
+      - { title: "Amber Camp", href: "https://abcamp.github.io", align: right }
+      - { icon: "fa fa-github", href: "https://github.com/abcamp", align: right, target: blank }
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(tidyverse)
+library(plotly)
+```
+
+Column 
+-----------------------------------------------------------------------
+
+### Star Wars data table
+
+```{r}
+starwars <- starwars %>% 
+  select(name, height, mass, gender, species, homeworld)
+
+knitr::kable(starwars)
+```
+
+Column
+-----------------------------------------------------------------------
+
+### Number of characters from each homeworld by species
+
+```{r}
+homeworld_species <- ggplot(starwars, aes(x = homeworld, fill = species)) +
+  geom_bar(na.rm = TRUE) +
+  theme_minimal() +
+  coord_flip()
+
+ggplotly(homeworld_species)
+```
+
+### Distribution of mass and height by gender
+
+```{r}
+mass_height <- ggplot(starwars, aes(x = mass, y = height, color = gender, label =)) +
+  geom_point()
+
+ggplotly(mass_height)
+```
+
