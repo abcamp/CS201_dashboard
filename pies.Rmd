@@ -1,0 +1,80 @@
+---
+title: "Pies"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(tidyverse)
+library(janitor)
+library(plotly)
+```
+
+```{r, echo=FALSE, message=FALSE}
+# read in data
+pies <- read_csv("data/orders_export_1.csv")
+pies <- clean_names(pies)
+```
+
+```{r, echo=FALSE}
+# manipulate data
+pies <- pies %>%
+  mutate(
+    pandan  = case_when(startsWith(lineitem_name, "Pandan") ~ lineitem_quantity, TRUE ~ 0),
+    apple = case_when(startsWith(lineitem_name, "Apple") ~ lineitem_quantity, TRUE ~ 0),
+    persimmon  = case_when(startsWith(lineitem_name, "Persimmon") ~ lineitem_quantity, TRUE ~ 0),
+  ) %>% 
+  select(name, pandan, apple, persimmon)
+
+pies <- pies %>% 
+  group_by(name) %>% 
+  summarise(
+    pandan = sum(pandan),
+    apple = sum(apple),
+    persimmon = sum(persimmon),
+    total_pies = (pandan + apple + persimmon))
+
+#convert to long
+pies_long <- pies %>%
+  pivot_longer(cols = c(pandan, apple, persimmon), 
+               names_to = "pie_type", 
+               values_to = "quantity") %>%
+  filter(quantity > 0)
+```
+
+Column {data-width=650}
+-----------------------------------------------------------------------
+
+### Pie type by Order
+
+```{r}
+# hideous, but it'll do for now
+ggplot(pies_long, aes(x = name, fill = pie_type)) +
+  geom_bar() + 
+  coord_flip()
+```
+
+### Chart B
+
+```{r}
+
+```
+
+Column {data-width=350}
+-----------------------------------------------------------------------
+
+### Chart C
+
+```{r}
+
+```
+
+### Chart D
+
+```{r}
+
+```
+
