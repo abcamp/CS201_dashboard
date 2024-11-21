@@ -1,0 +1,49 @@
+---
+title: "C201"
+author: "Rhyn Chambers"
+date: 11/18/24
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns # can also be rows
+    vertical_layout: fill # can aslo be scroll
+    source_code: embed
+    theme:
+      bootswatch: yeti
+    
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(tidyverse)
+library(plotly)
+```
+
+## Column {data-width="650"}
+
+### Chart A
+
+```{r}
+ggplot(starwars, aes(x=name, y=height)) +
+  geom_bar(stat="identity")
+```
+
+## Column {data-width="350"}
+
+### Chart B
+
+```{r}
+p <- ggplot(starwars, aes(x=homeworld, fill=gender)) + 
+  geom_bar()
+
+ggplotly(p)
+```
+
+### Chart C
+
+```{r}
+starwars <- starwars %>%
+  select(name, height, mass, gender, species, homeworld)
+
+knitr::kable(starwars)
+  
+```

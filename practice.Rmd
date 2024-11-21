@@ -4,8 +4,8 @@ title: "CS201 Flexdashboard Practice"
 # date: 11/18/24
 output: 
   flexdashboard::flex_dashboard:
-    orientation: rows # can also be rows
-    vertical_layout: fill # can also be scroll
+    orientation: columns # can also be rows
+    vertical_layout: scroll # can also be scroll
     source_code: embed
     theme:
       bootswatch: yeti
@@ -18,6 +18,8 @@ output:
 library(flexdashboard)
 library(tidyverse)
 library(plotly)
+library(janitor)
+library(here)
 ```
 
 
@@ -50,5 +52,29 @@ starwars <- starwars %>%
   select(name, height, mass, gender, species, homeworld)
 
 knitr::kable(starwars)
+```
+
+### Hello!
+```{r}
+flowerdata <- read_csv(here("data/flowers.csv"))
+
+flowerdata <- flowerdata %>% clean_names()
+
+color_climate_summary <- flowerdata %>%
+  group_by(color, climate) %>%
+  tally() %>%
+  arrange(color, desc(n))
+
+color_climate_plot <- ggplot(color_climate_summary, aes(x = color, y = n, fill = climate)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Flower Color Distribution by Climate",
+       x = "Color",
+       y = "Count of Flowers",
+       fill = "Climate") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+
+interactive_color_climate_plot <- ggplotly(color_climate_plot)
+interactive_color_climate_plot
 ```
 
