@@ -4,7 +4,7 @@ title: "CS201 Flexdashboard Practice"
 # date: 11/18/24
 output: 
   flexdashboard::flex_dashboard:
-    orientation: rows # can also be rows
+    orientation: columns # can also be rows
     vertical_layout: fill # can also be scroll
     source_code: embed
     theme:
