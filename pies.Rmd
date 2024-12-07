@@ -2,8 +2,15 @@
 title: "Pies"
 output: 
   flexdashboard::flex_dashboard:
-    orientation: columns
-    vertical_layout: fill
+    orientation: columns # can also be rows
+    vertical_layout: fill # can also be scroll
+    source_code: embed
+    theme:
+      bootswatch: yeti
+    navbar:
+      - { title: "Amber Camp", href: "https://abcamp.github.io", align: right }
+      - { icon: "fa fa-github", href: "https://github.com/abcamp", align: right, target: blank }
+---
 ---
 
 ```{r setup, include=FALSE}
