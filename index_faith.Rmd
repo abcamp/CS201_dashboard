@@ -1,0 +1,271 @@
+---
+title: "CS201 Flexdashboard: Violent Crime In The US: Overview"
+author: Faith Hardie
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: scroll
+    source_code: embed
+    theme:  simplex
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(tidyverse)
+library(here)
+library(janitor)
+library(ggplot2)
+library(scales)
+library(plotly)
+library(dplyr)
+library(rnaturalearth)
+library(rnaturalearthdata)
+library(sf)
+library(leaflet)
+library(htmlwidgets)
+library(usdata)
+
+```
+
+# Data
+
+```{r include=FALSE}
+
+data <- read_csv(here("data/report.csv"))
+
+#data_2015 <- read_csv(here("data/data_2015.csv"))
+#jurisdiction_homicide_data <- #read_csv(here("data/jurisdiction_homicide_data.csv"))
+#jurisdiction_robbery_data <- #read_csv(here("data/jurisdiction_robbery_data.csv"))
+```
+
+```{r include=FALSE}
+#cleaning up data 
+data <- data %>%
+  clean_names()
+
+data$agency_code <- as.factor(data$agency_code)
+data$agency_jurisdiction <- as.factor(data$agency_jurisdiction)
+data$report_year<- as.factor(data$report_year)
+
+```
+
+## row
+
+### Heat Map of US Violent Crime Rate 2015
+
+```{r}
+# Prepare crime data for 2015
+data_2015 <- data %>%
+  filter(report_year == 2015) %>%
+  group_by(state = sub(".*, ", "", agency_jurisdiction)) %>%
+  summarize(
+    total_population = sum(population, na.rm = TRUE),
+    total_violent_crimes = sum(violent_crimes, na.rm = TRUE),
+    violent_crime_rate = (sum(violent_crimes, na.rm = TRUE) / sum(population, na.rm = TRUE)) * 100000
+  ) %>%
+  ungroup() %>%
+  mutate(state = abbr2state(state)) # Convert abbreviations to full names
+
+# Load U.S. state geometries
+us_states <- ne_states(country = "United States of America", returnclass = "sf") %>%
+  filter(!name %in% c("Hawaii", "Alaska")) # Exclude Hawaii and Alaska
+
+# Merge crime data with spatial data
+us_states <- us_states %>%
+  left_join(data_2015, by = c("name" = "state"))
+
+# Check for missing data
+if (all(is.na(us_states$violent_crime_rate))) {
+  stop("The violent_crime_rate column contains only NA values. Check the join or data preparation.")
+}
+
+# Create the heatmap with a title
+map <- leaflet(us_states) %>%
+  addTiles() %>%
+  addPolygons(
+    fillColor = ~colorNumeric(palette = "YlOrRd", domain = us_states$violent_crime_rate)(violent_crime_rate),
+    weight = 1,
+    color = "white",
+    fillOpacity = 0.7,
+    label = ~paste0(
+      name, "<br>",
+      "Violent Crime Rate: ", round(violent_crime_rate, 2), " per 100,000 people"
+    )
+  ) %>%
+  addLegend(
+    pal = colorNumeric(palette = "YlOrRd", domain = us_states$violent_crime_rate),
+    values = ~violent_crime_rate,
+    title = "Violent Crime Rate<br>(per 100,000)",
+    position = "bottomright" # Move legend to top-left
+  )
+
+# Add a title to the map
+map <- htmlwidgets::prependContent(
+  map,
+  htmltools::tags$h2("Violent Crime Rates US 2015", style = "text-align:center; margin: 10px;")
+)
+
+# Display the map
+map
+```
+
+## row
+
+### Robbery Trends 1975-2015
+
+```{r}
+# Aggregate 
+jurisdiction_robbery_data <- data %>%
+  group_by(jurisdiction = sub(",.*", "", agency_jurisdiction), report_year) %>%
+  summarize(total_robberies = sum(robberies, na.rm = TRUE)) %>%
+  ungroup()
+##Creating smaller set: highestpopulation
+top_jurisdiction <- jurisdiction_robbery_data %>%
+  group_by(jurisdiction) %>%
+  summarize(total_robberies_all_years = sum(total_robberies, na.rm = TRUE)) %>%
+  arrange(desc(total_robberies_all_years)) %>%
+  slice(1:10) %>%
+  pull(jurisdiction)
+
+# Filter data 
+top_jurisdiction_data <- jurisdiction_robbery_data %>%
+  filter(jurisdiction %in% top_jurisdiction)
+
+##Need to mutate factor to numeric so that the x axis labels can change to every 5 years for readability purposes
+top_jurisdiction_data <- top_jurisdiction_data %>%
+  mutate(report_year = as.numeric(as.character(report_year)))  
+
+# line chart
+ggplot(top_jurisdiction_data, aes(x = report_year, y = total_robberies, color = jurisdiction, group = jurisdiction)) +
+  geom_line(size = 1) +
+  labs(
+    title = "Robbery Trends for States with Highest Population",
+    x = "Year",
+    y = "Total Robberies",
+    color = "Jurisdiction"
+  ) +
+   scale_x_continuous(
+    breaks = seq(min(top_jurisdiction_data$report_year), max(top_jurisdiction_data$report_year), by = 5)
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 16, hjust = 0.3),
+    axis.title.x = element_text(size = 12),
+    axis.title.y = element_text(size = 12),
+    axis.text = element_text(size = 10),
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 10)
+  )
+```
+
+## row {.tabset .tabset-fade}
+
+### US Homicides 1975 histogram
+
+```{r}
+### Aggregate homicides data
+jurisdiction_homicide_data <- data %>%
+  group_by(jurisdiction = sub(",.*", "", agency_jurisdiction), report_year) %>%
+  summarize(total_homicides = sum(homicides, na.rm = TRUE)) %>%
+  ungroup()
+
+### Create smaller set: jurisdictions with the highest total homicides across all years
+top_jurisdiction <- jurisdiction_homicide_data %>%
+  group_by(jurisdiction) %>%
+  summarize(total_homicides_all_years = sum(total_homicides, na.rm = TRUE)) %>%
+  arrange(desc(total_homicides_all_years)) %>%
+  slice(1:10) %>%
+  pull(jurisdiction)
+
+### Exclude "United States"
+top_jurisdiction <- setdiff(top_jurisdiction, "United States")
+
+### Filter data for top jurisdictions and year 1975
+data_1975 <- jurisdiction_homicide_data %>%
+  filter(jurisdiction %in% top_jurisdiction, report_year == 1975)
+
+### Histogram for 1975
+h1975 <- ggplot(data_1975, aes(x = jurisdiction, y = total_homicides, fill = jurisdiction)) +
+  geom_col() +
+  labs(
+    title = "Total Homicides in 1975 for Top Jurisdictions",
+    x = "Jurisdiction",
+    y = "Total Homicides",
+    fill = "Jurisdiction"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 16, hjust = 0.5),
+    axis.title.x = element_text(size = 12),
+    axis.title.y = element_text(size = 12),
+    axis.text = element_text(size = 10, angle = 45, hjust = 1),
+    legend.position = "none"
+  )
+
+ggplotly(h1975)
+```
+
+### US Homicides 2015 histogram
+
+```{r}
+### Aggregate homicides data
+jurisdiction_homicide_data <- data %>%
+  group_by(jurisdiction = sub(",.*", "", agency_jurisdiction), report_year) %>%
+  summarize(total_homicides = sum(homicides, na.rm = TRUE)) %>%
+  ungroup()
+
+### Create smaller set: jurisdictions with the highest total homicides across all years
+top_jurisdiction <- jurisdiction_homicide_data %>%
+  group_by(jurisdiction) %>%
+  summarize(total_homicides_all_years = sum(total_homicides, na.rm = TRUE)) %>%
+  arrange(desc(total_homicides_all_years)) %>%
+  slice(1:10) %>%
+  pull(jurisdiction)
+
+### Exclude "United States"
+top_jurisdiction <- setdiff(top_jurisdiction, "United States")
+
+### Filter data for top jurisdictions and year 2015
+data_2015 <- jurisdiction_homicide_data %>%
+  filter(jurisdiction %in% top_jurisdiction, report_year == 2015)
+
+### Histogram for 2015
+h2015 <- ggplot(data_2015, aes(x = jurisdiction, y = total_homicides, fill = jurisdiction)) +
+  geom_col() +
+  labs(
+    title = "Total Homicides in 2015 for Top Jurisdictions",
+    x = "Jurisdiction",
+    y = "Total Homicides",
+    fill = "Jurisdiction"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 16, hjust = 0.5),
+    axis.title.x = element_text(size = 12),
+    axis.title.y = element_text(size = 12),
+    axis.text = element_text(size = 10, angle = 45, hjust = 1),
+    legend.position = "none"
+  )
+
+ggplotly(h2015)
+
+```
+
+# About
+
+This Dashboard was designed for my CS201 final project with the intent to share US crime statistics through readable charts.
+
+The questions this dashboard explores are:
+
+How has violent crime in the US changed since 1975-2015? How does violent crime vary from state to state?
+
+The data set used for this dashboard is originally found at: <https://www.kaggle.com/datasets/marshallproject/crime-rates>
+
+"Crime in Context, 1975-2015" The Marshall Project.
+
+<<<<<<< HEAD
+All Code for this project is available in my github: <https://github.com/FaithHardie/CS201_dashboard> 
+
+All Code for this project is available in my github: <https://github.com/FaithHardie/CS201_dashboard>
+
+
